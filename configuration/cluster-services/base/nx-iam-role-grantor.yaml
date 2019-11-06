@@ -1,0 +1,71 @@
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  namespace: nx-cluster-services
+  name:  nx-iam-role-grantor
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: ClusterRotator 
+        role: server
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        iam.amazonaws.com/role: $ROLE
+    spec:
+      serviceAccountName:  nx-iam-role-grantor
+      containers:
+        - name:  nx-iam-role-grantor
+          image: $IMAGENAME
+          ports:
+          - containerPort: 8000
+          imagePullPolicy: Always
+          env:
+          - name: CLUSTERNAME
+            valueFrom:
+              configMapKeyRef:
+                name: cluster
+                key: clusterName
+          - name: ACCOUNT
+            valueFrom:
+              configMapKeyRef:
+                name: cluster
+                key: accountId
+          - name: AWS_REGION
+            valueFrom:
+              configMapKeyRef:
+                name: cluster
+                key: awsRegion
+          - name: AWS_DEFAULT_REGION
+            valueFrom:
+              configMapKeyRef:
+                name: cluster
+                key: awsRegion
+            
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nx-iam-role-grantor
+  namespace: nx-cluster-services
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+    prometheus.io/path: "metric"
+
+spec:
+  ports:
+  - name: metrics
+    port: 8000
+    protocol: TCP
+    targetPort: 8000
+  selector:
+    app: ClusterRotator
+    role: server
+---

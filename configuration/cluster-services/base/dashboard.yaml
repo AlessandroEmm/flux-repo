@@ -1,0 +1,325 @@
+# Copyright 2017 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# ------------------- Dashboard Secret ------------------- #
+
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    k8s-app: kubernetes-dashboard
+  name: kubernetes-dashboard-certs
+  namespace: kube-system
+type: Opaque
+
+---
+# ------------------- Dashboard Service Account ------------------- #
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    k8s-app: kubernetes-dashboard
+  name: kubernetes-dashboard
+  namespace: kube-system
+
+---
+# ------------------- Dashboard Role & Role Binding ------------------- #
+
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kubernetes-dashboard-minimal
+  namespace: kube-system
+rules:
+  # Allow Dashboard to create 'kubernetes-dashboard-key-holder' secret.
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["create"]
+  # Allow Dashboard to create 'kubernetes-dashboard-settings' config map.
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["create"]
+  # Allow Dashboard to get, update and delete Dashboard exclusive secrets.
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames: ["kubernetes-dashboard-key-holder", "kubernetes-dashboard-certs"]
+  verbs: ["get", "update", "delete"]
+  # Allow Dashboard to get and update 'kubernetes-dashboard-settings' config map.
+- apiGroups: [""]
+  resources: ["configmaps"]
+  resourceNames: ["kubernetes-dashboard-settings"]
+  verbs: ["get", "update"]
+  # Allow Dashboard to get metrics from heapster.
+- apiGroups: [""]
+  resources: ["services"]
+  resourceNames: ["heapster"]
+  verbs: ["proxy"]
+- apiGroups: [""]
+  resources: ["services/proxy"]
+  resourceNames: ["heapster", "http:heapster:", "https:heapster:"]
+  verbs: ["get"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kubernetes-dashboard-minimal
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kubernetes-dashboard-minimal
+subjects:
+- kind: ServiceAccount
+  name: kubernetes-dashboard
+  namespace: kube-system
+
+---
+# ------------------- Dashboard Deployment ------------------- #
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  labels:
+    k8s-app: kubernetes-dashboard
+  name: kubernetes-dashboard
+  namespace: kube-system
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      k8s-app: kubernetes-dashboard
+  template:
+    metadata:
+      labels:
+        k8s-app: kubernetes-dashboard
+    spec:
+      containers:
+      - args:
+        - --enable-insecure-login
+        - --insecure-port=9090
+        - --insecure-bind-address=0.0.0.0
+        image: k8s.gcr.io/kubernetes-dashboard-amd64:v1.10.1
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 9090
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 30
+        name: kubernetes-dashboard
+        ports:
+        - containerPort: 9090
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /certs
+          name: kubernetes-dashboard-certs
+        - mountPath: /tmp
+          name: tmp-volume
+      - image: ${NGINX_IMAGE}
+        imagePullPolicy: Always
+        name: nginx-sidecar
+        ports:
+        - containerPort: 9091
+          protocol: TCP
+      volumes:
+      - name: kubernetes-dashboard-certs
+        secret:
+          secretName: kubernetes-dashboard-certs
+      - name: tmp-volume
+        emptyDir: {}
+      serviceAccountName: kubernetes-dashboard
+      # Comment the following tolerations if Dashboard must not be deployed on master
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    k8s-app: kubernetes-dashboard
+  name: kubernetes-dashboard
+  namespace: kube-system
+spec:
+  ports:
+    - port: 443
+      targetPort: 9091
+  selector:
+    k8s-app: kubernetes-dashboard
+---
+apiVersion: "authentication.istio.io/v1alpha1"
+kind: "Policy"
+metadata:
+  name: "overwrite-kubernetes-dashboard"
+spec:
+  targets:
+  - name: kubernetes-dashboard
+---
+
+apiVersion: "networking.istio.io/v1alpha3"
+kind: "DestinationRule"
+metadata:
+  name: "overwrite-kubernetes-dashboard"
+spec:
+  host: kubernetes-dashboard.kube-system.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: DISABLE
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: heapster
+  namespace: kube-system
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: heapster
+  namespace: kube-system
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        task: monitoring
+        k8s-app: heapster
+    spec:
+      serviceAccountName: heapster
+      containers:
+      - name: heapster
+        image: k8s.gcr.io/heapster-amd64:v1.5.4
+        imagePullPolicy: IfNotPresent
+        command:
+        - /heapster
+        - --source=kubernetes:https://kubernetes.default
+        - --sink=influxdb:http://monitoring-influxdb.kube-system.svc:8086
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    task: monitoring
+    # For use as a Cluster add-on (https://github.com/kubernetes/kubernetes/tree/master/cluster/addons)
+    # If you are NOT using this as an addon, you should comment out this line.
+    kubernetes.io/cluster-service: 'true'
+    kubernetes.io/name: Heapster
+  name: heapster
+  namespace: kube-system
+spec:
+  ports:
+  - port: 80
+    targetPort: 8082
+  selector:
+    k8s-app: heapster
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: heapster
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:heapster
+subjects:
+- kind: ServiceAccount
+  name: heapster
+  namespace: kube-system
+
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: monitoring-influxdb
+  namespace: kube-system
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        task: monitoring
+        k8s-app: influxdb
+    spec:
+      containers:
+      - name: influxdb
+        image: k8s.gcr.io/heapster-influxdb-amd64:v1.5.2
+        volumeMounts:
+        - mountPath: /data
+          name: influxdb-storage
+      volumes:
+      - name: influxdb-storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    task: monitoring
+    # For use as a Cluster add-on (https://github.com/kubernetes/kubernetes/tree/master/cluster/addons)
+    # If you are NOT using this as an addon, you should comment out this line.
+    kubernetes.io/cluster-service: 'true'
+    kubernetes.io/name: monitoring-influxdb
+  name: monitoring-influxdb
+  namespace: kube-system
+spec:
+  ports:
+  - port: 8086
+    targetPort: 8086
+  selector:
+    k8s-app: influxdb
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: kubernetes-dashboard
+  namespace: kube-system
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - istio-system/istio-internal-gateway
+  http:
+  - match:
+    - uri:
+        prefix: "/dashboard"
+    rewrite:
+      uri: "/dashboard"
+    route:
+    - destination:
+        host: kubernetes-dashboard
+        port:
+          number: 443
+  - match:
+    - uri:
+        prefix: "/dashboard/"
+    rewrite:
+      uri: "/dashboard/"
+    route:
+    - destination:
+        host: kubernetes-dashboard
+        port:
+          number: 443

@@ -1,0 +1,18 @@
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: iam-roles.iam-role-grantor.k8s.io
+spec:
+  group:  iam-role-grantor.k8s.io
+  versions:
+  - name: v1
+    served: true
+    storage: true
+  names:
+    kind: iam-role
+    plural: iam-roles
+  scope: Namespaced
+  subresources:
+    # status enables the status subresource.
+    status: {}

@@ -1,0 +1,20 @@
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  namespace: nx-cluster-services
+  name:  nx-iam-role-grantor
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: ClusterRotator
+        role: server
+      annotations:
+        iam.amazonaws.com/role: arn:aws:iam::ACCOUNT:role/nx-sre/k8s/pod/nx-platform-v1-STAGE/nx-iam-role-grantor-STAGE
+    spec:
+      serviceAccountName:  nx-iam-role-grantor
+      containers:
+        - name:  nx-iam-role-grantor
+          image: 'ACCOUNT.dkr.ecr.eu-central-1.amazonaws.com/nexxiot.com/sre/k8s/nx-iam-role-grantor:STAGE'

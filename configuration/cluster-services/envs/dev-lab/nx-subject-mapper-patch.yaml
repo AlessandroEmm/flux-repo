@@ -1,0 +1,26 @@
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  namespace: nx-cluster-services
+  name: nx-subject-mapper
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nx-subject-mapper
+        role: server
+      annotations:
+        iam.amazonaws.com/role: arn:aws:iam::ACCOUNT:role/nx-sre/k8s/pod/nx-platform-v1-STAGE/nx-subject-mapper-role-STAGE
+    spec:
+      serviceAccountName: nx-subject-mapper
+      containers:
+        - name: nx-subject-mapper
+          image: 'ACCOUNT.dkr.ecr.eu-central-1.amazonaws.com/nexxiot.com/sre/k8s/nx-subject-mapper:STAGE'
+          env:
+          - name: LISTERROLE
+            valueFrom:
+              configMapKeyRef:
+                name: cluster
+                key: subjectMapperRole

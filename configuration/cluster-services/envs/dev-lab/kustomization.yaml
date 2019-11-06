@@ -1,0 +1,10 @@
+bases:
+ - ../../base
+patchesStrategicMerge:
+  - nx-ecr-permitter-patch.yaml
+  - nx-iam-role-grantor-patch.yaml
+  - nx-node-carer-patch.yaml
+  - nx-node-cleaner-patch.yaml
+  - nx-node-demoter-patch.yaml
+  - nx-subject-mapper-patch.yaml
+  - dashboard-patch.yaml

@@ -1,0 +1,12 @@
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: cluster-edit
+subjects:
+- kind: Group
+  name: nx::edit # Name is case sensitive
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: cluster-edit 
+  apiGroup: rbac.authorization.k8s.io

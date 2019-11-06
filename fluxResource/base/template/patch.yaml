@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flux
+spec:
+  template:
+    spec:
+      containers:
+        - name: flux
+          args:
+            - --manifest-generation=true
+            - --memcached-hostname=memcached.flux
+            - --memcached-service=
+            - --ssh-keygen-dir=/var/fluxd/keygen
+            - --git-readonly
+            - --git-branch=$BRANCH
+            - --git-path=configuration/cluster-base/$ENVNAME/cluster-services,configuration/cluster-base/$ENVNAME/devops/nx-connect,configuration/cluster-base/$ENVNAME/devops/nx-iam,configuration/cluster-base/$ENVNAME/devops/nx-rail,configuration/cluster-base-static
+            - --git-user=git
+            - --git-email=flux-user@nexxiot.com
+            - --git-url=git@$FLUX_URL
+          volumeMounts:
+          - name: ssh-config-volume
+            mountPath: /root/.ssh/config
+            subPath: config
+          env:
+          - name: STAGE
+            value: $STAGE
+          - name: ACCOUNT
+            value: '$ACCOUNT'
+          - name: ENVNAME
+            value: '$ENVNAME'
+            
+      volumes:
+        - name: ssh-config-volume
+          configMap:
+            # Provide the name of the ConfigMap containing the files you want
+            # to add to the container
+            name: ssh-config
+---

@@ -1,0 +1,8 @@
+apiVersion: v1 
+kind: Namespace
+metadata:
+  name: dashboard
+  labels:
+    istio-injection: enable 
+  annotations:
+    iam.amazonaws.com/permitted: ".*"

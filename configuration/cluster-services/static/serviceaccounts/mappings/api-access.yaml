@@ -1,0 +1,24 @@
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: api-access
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: api-access
+subjects:
+- kind: ServiceAccount
+  name: nx-node-demoter
+  namespace: nx-cluster-services
+- kind: ServiceAccount
+  name: nx-node-cleaner
+  namespace: nx-cluster-services
+- kind: ServiceAccount
+  name: nx-subject-mapper
+  namespace: nx-cluster-services
+- kind: ServiceAccount
+  name: nx-node-carer
+  namespace: nx-cluster-services
+- kind: ServiceAccount
+  name: nx-iam-role-grantor
+  namespace: nx-cluster-services

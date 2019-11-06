@@ -1,0 +1,44 @@
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  namespace: nx-cluster-services
+  name: nx-node-demoter
+spec:
+  schedule: "*/15 * * * *" # run every 15 minutes
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 30
+  failedJobsHistoryLimit: 30
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: instance-retirement-service
+          annotations:
+            iam.amazonaws.com/role: $ROLE
+        spec:
+          containers:
+          - name: nx-node-demoter
+            image: demoterImageName
+            imagePullPolicy: Always
+            env:
+            - name: CLUSTER_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: cluster
+                  key: clusterName
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: cluster
+                  key: awsRegion
+            - name: AWS_DEFAULT_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: cluster
+                  key: awsRegion
+            - name: CLUSTER_MAX_RETIREMENTS_PER_DAY
+              value: "1"
+          restartPolicy: OnFailure
+

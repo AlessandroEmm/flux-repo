@@ -1,0 +1,31 @@
+namespace: cluster-services 
+resources:
+  - ssh-config-map.yaml
+bases:
+  - github.com/fluxcd/flux//deploy
+patchesJson6902:
+- target:
+    version: v1
+    kind: Namespace
+    name: flux
+  path: namespace.yaml
+- target:
+    group: rbac.authorization.k8s.io
+    version: v1beta1
+    kind: ClusterRole
+    name: flux
+  path: clusterrole.yaml
+- target:
+    group: rbac.authorization.k8s.io
+    version: v1beta1
+    kind: ClusterRoleBinding
+    name: flux
+  path: clusterrolebinding.yaml
+- target:
+    version: v1
+    kind: ServiceAccount
+    namespace: flux
+    name: flux
+  path: sa.yaml
+patchesStrategicMerge:
+  - patch.yaml

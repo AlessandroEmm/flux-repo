@@ -1,0 +1,6 @@
+version: 1
+commandUpdated:
+  generators:
+    - command: "sed -i 's@STAGE@'${STAGE}'@g' patch.yaml"
+    - command: "sed -i 's@ACCOUNT@'${ACCOUNT}'@g' patch.yaml"
+    - command: "kustomize build"

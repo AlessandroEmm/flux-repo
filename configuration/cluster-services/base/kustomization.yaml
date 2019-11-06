@@ -1,0 +1,8 @@
+resources:
+  - nx-ecr-permitter.yaml
+  - nx-iam-role-grantor.yaml
+  - nx-node-carer.yaml
+  - nx-node-cleaner.yaml
+  - nx-node-demoter.yaml
+  - nx-subject-mapper.yaml
+  - dashboard.yaml

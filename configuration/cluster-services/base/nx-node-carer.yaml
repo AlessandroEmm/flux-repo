@@ -1,0 +1,58 @@
+---
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  namespace: nx-cluster-services
+  name: nx-node-carer
+spec:
+  template:
+    metadata:
+      labels:
+        app: nodeCarer 
+        role: service
+      annotations:
+        iam.amazonaws.com/role: $ROLE
+    spec:
+      serviceAccountName: nx-node-carer
+      hostNetwork: false
+      containers:
+        - name: nx-node-carer
+          image: nxNodeCarerImageName
+          ports:
+          - containerPort: 8000
+          imagePullPolicy: Always
+          env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: ROLE
+            value: $ROLE
+          - name: ACCOUNTID
+            valueFrom:
+              configMapKeyRef:
+                name: cluster
+                key: accountId
+  updateStrategy:
+    type: RollingUpdate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nx-node-carer
+  namespace: nx-cluster-services
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+    prometheus.io/path: "metric"
+spec:
+  clusterIP: None
+  ports:
+  - name: metrics
+    port: 8000
+    protocol: TCP
+    targetPort: 8000
+  selector:
+    app: nodeCarer
+    role: service
+---

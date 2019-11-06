@@ -1,0 +1,16 @@
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  namespace: nx-cluster-services
+  name: nx-node-cleaner
+spec:
+  template:
+    metadata:
+      annotations:
+        iam.amazonaws.com/role: arn:aws:iam::ACCOUNT:role/nx-sre/k8s/pod/nx-platform-v1-STAGE/nx-node-cleaner-role-STAGE
+    spec:
+      serviceAccountName: nx-node-cleaner
+      containers:
+        - name: nx-node-cleaner
+          image: 'ACCOUNT.dkr.ecr.eu-central-1.amazonaws.com/nexxiot.com/sre/k8s/nx-node-cleaner:STAGE'

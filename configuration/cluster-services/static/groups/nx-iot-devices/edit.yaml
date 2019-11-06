@@ -1,0 +1,23 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: nx-iot-core:edit
+  namespace: nx-iot-devices 
+rules:
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["*"]
+  verbs: [ "get", "list", "watch", "create", "update", "patch", "delete" ]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: nx-iot-core:edit 
+  namespace: nx-iot-devices
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: nx-iot-core:edit
+subjects:
+- kind: Group
+  name: "nx:nx-iot-core:edit"
+  apiGroup: rbac.authorization.k8s.io

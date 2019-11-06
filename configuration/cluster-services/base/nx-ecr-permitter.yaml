@@ -1,0 +1,37 @@
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  namespace: nx-cluster-services
+  name: nx-ecr-permitter
+spec:
+  schedule: "*/2 * * * *" # run every 15 minutes
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 30
+  failedJobsHistoryLimit: 30
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: ecr-permitter 
+          annotations:
+            iam.amazonaws.com/role: $ROLE
+        spec:
+          containers:
+          - name: nx-ecr-permitter
+            image: permitterImageName
+            imagePullPolicy: Always
+            env:
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: cluster
+                  key: awsRegion
+            - name: AWS_DEFAULT_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: cluster
+                  key: awsRegion
+          restartPolicy: OnFailure
+

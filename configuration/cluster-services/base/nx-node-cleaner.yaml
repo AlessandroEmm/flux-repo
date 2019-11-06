@@ -1,0 +1,67 @@
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  namespace: nx-cluster-services
+  name: nx-node-cleaner
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: ClusterRotator 
+        role: server
+      annotations:
+        iam.amazonaws.com/role: $ROLE
+    spec:
+      serviceAccountName: nx-node-cleaner
+      containers:
+        - name: nx-node-cleaner 
+          image: nodeCleanerImageName
+          ports:
+          - containerPort: 8000
+          imagePullPolicy: Always
+          env:
+          - name: STAGE
+            valueFrom:
+              configMapKeyRef:
+                name: cluster
+                key: stage
+          - name: AWS_REGION
+            valueFrom:
+              configMapKeyRef:
+                name: cluster
+                key: awsRegion
+          - name: AWS_DEFAULT_REGION
+            valueFrom:
+              configMapKeyRef:
+                name: cluster
+                key: awsRegion
+          - name: SQSQueuesUrl
+            valueFrom:
+              configMapKeyRef:
+                name: nx-node-cleaner
+                key: terminationQueue
+     
+            
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nx-node-cleaner
+  namespace: nx-cluster-services
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+    prometheus.io/path: "metric"
+spec:
+  ports:
+  - name: metrics
+    port: 8000
+    protocol: TCP
+    targetPort: 8000
+  clusterIP: None
+  selector:
+    app: ClusterRotator
+    role: server
+---

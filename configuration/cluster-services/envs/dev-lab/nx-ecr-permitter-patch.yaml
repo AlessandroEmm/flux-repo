@@ -1,0 +1,17 @@
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  namespace: nx-cluster-services
+  name: nx-ecr-permitter
+spec:
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          annotations:
+            iam.amazonaws.com/role: arn:aws:iam::ACCOUNT:role/nx-sre/k8s/pod/nx-platform-v1-STAGE/nx-ecr-permitter-role-STAGE
+        spec:
+          containers:
+          - name: nx-ecr-permitter
+            image: 'ACCOUNT.dkr.ecr.eu-central-1.amazonaws.com/nexxiot.com/sre/k8s/nx-ecr-permitter:STAGE'
