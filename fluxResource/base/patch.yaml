@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flux
+spec:
+  template:
+    spec:
+      containers:
+        - name: flux
+          args:
+            - --manifest-generation=true
+            - --memcached-hostname=memcached.flux
+            - --memcached-service=
+            - --ssh-keygen-dir=/var/fluxd/keygen
+            - --git-readonly
+            - --git-branch=master
+            - --git-path=configuration/cluster-base/dev-lab/cluster-services,configuration/cluster-base/dev-lab/devops/connect,configuration/cluster-base/dev-lab/devops/iam,configuration/cluster-base/dev-lab/devops/rail,configuration/cluster-base-static
+            - --git-email=flux-user@bla.com
+            - --git-url=https://github.com/AlessandroEmm/flux-repo.git
+          volumeMounts:
+          - name: ssh-config-volume
+            mountPath: /root/.ssh/config
+            subPath: config
+          env:
+          - name: STAGE
+            value: $STAGE
+          - name: ACCOUNT
+            value: '$ACCOUNT'
+          - name: ENVNAME
+            value: '$ENVNAME'
+            
+      volumes:
+        - name: ssh-config-volume
+          configMap:
+            # Provide the name of the ConfigMap containing the files you want
+            # to add to the container
+            name: ssh-config
+---
